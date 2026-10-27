@@ -1,0 +1,9 @@
+{
+  "item": {
+    "distDir": "./dist",
+    "buildCommand": "npm run build",
+    "title": "item-carry",
+    "description": "タイトルバーと外枠をつかんで運べるウィンドウ。useItemCarryの移動・水平回転・位置共有を試せるデモアイテムです。",
+    "thumbnailPath": "thumbnail.png"
+  }
+}

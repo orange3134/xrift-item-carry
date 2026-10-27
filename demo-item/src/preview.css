@@ -1,0 +1,14 @@
+:root { font-family: "Yu Gothic UI", "Hiragino Kaku Gothic ProN", sans-serif; color: #192d47; background: #e7edf6; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { width: 100vw; height: 100dvh; }
+.preview-header { position: absolute; top: 24px; left: 32px; right: 32px; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 20px; pointer-events: none; }
+h1 { font-size: 24px; margin: 0 0 6px; font-weight: 700; }
+p { margin: 0; font-size: 14px; line-height: 1.6; }
+button { pointer-events: auto; font: inherit; padding: 12px 20px; border: 1px solid #2454b9; border-radius: 6px; color: white; background: #3267dc; cursor: pointer; }
+button:hover { background: #2454b9; }
+button:focus-visible { outline: 3px solid #192d47; outline-offset: 3px; }
+.preview-footer { position: absolute; bottom: 24px; left: 32px; right: 32px; pointer-events: none; display: flex; justify-content: flex-end; gap: 20px; color: #52657e; }
+output { font-size: 13px; white-space: nowrap; }
+.reticle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; font-size: 24px; color: #ffffff; text-shadow: 0 0 2px #192d47; }
+@media (max-width: 700px) { .preview-header { top: 16px; left: 16px; right: 16px; align-items: flex-start; } h1 { font-size: 20px; } .preview-header p { max-width: 18em; } button { padding: 10px 12px; white-space: nowrap; font-size: 13px; } .preview-footer { left: 16px; right: 16px; bottom: 16px; display: block; } output { display: block; margin-top: 8px; } }

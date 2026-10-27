@@ -1,0 +1,71 @@
+import assert from 'node:assert/strict'
+import { mkdir } from 'node:fs/promises'
+const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
+const browser = await chromium.launch({ headless: true, channel: process.env.BROWSER_CHANNEL || 'msedge' })
+const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } })
+const errors = []
+const url = process.env.DEMO_URL || 'http://127.0.0.1:5182/'
+const transform = page => page.locator('#transform').getAttribute('data-transform').then(value => value ? JSON.parse(value) : null)
+async function open(query = '') {
+  const page = await context.newPage()
+  page.on('pageerror', error => errors.push(error.message))
+  const target = new URL(query, url)
+  if (process.env.DEMO_BUNDLE === '1') target.searchParams.set('built', '1')
+  await page.goto(target.href)
+  await page.waitForSelector('canvas')
+  await page.waitForTimeout(900)
+  return page
+}
+async function drag(page, from, to) {
+  await page.mouse.move(...from)
+  await page.mouse.down()
+  await page.mouse.move(...to, { steps: 12 })
+  await page.mouse.up()
+  await page.waitForTimeout(180)
+}
+try {
+  const page = await open('?item=shared-test')
+  await drag(page, [720, 500], [780, 540])
+  assert.equal(await transform(page), null, 'content must not start a carry')
+  await drag(page, [720, 215], [840, 255])
+  const moved = await transform(page)
+  assert.ok(moved?.position[0] > 0.2, 'title-bar drag must move the window')
+  assert.ok(Math.abs(moved.position[2]) < 1e-6, 'free cursor must keep its view plane')
+  const joined = await open('?item=shared-test')
+  await joined.waitForFunction(() => document.getElementById('transform')?.dataset.transform)
+  assert.deepEqual(await transform(joined), moved, 'late join must restore position and orientation')
+  const isolated = await open('?item=isolated-test')
+  assert.equal(await transform(isolated), null, 'placements must be isolated')
+  const preview = await open('?item=placement-test&placement=preview')
+  await drag(preview, [720, 215], [840, 255])
+  assert.equal(await transform(preview), null, 'placement preview must not carry or synchronize')
+
+  const carry = await open('?item=navigation-test')
+  await carry.getByRole('button', { name: '視点操作を開始' }).click()
+  await carry.waitForFunction(() => !!document.pointerLockElement)
+  await carry.mouse.down()
+  await carry.keyboard.down('w')
+  await carry.waitForTimeout(350)
+  await carry.keyboard.up('w')
+  await carry.waitForTimeout(120)
+  const forward = await transform(carry)
+  assert.ok(forward?.position[2] < -0.15, 'walking with the held window must carry it forward')
+  await carry.mouse.move(520, 500)
+  await carry.waitForTimeout(160)
+  const yaw = await transform(carry)
+  assert.ok(Math.abs(yaw.quaternion[1]) > 0.05, 'horizontal look must turn the window')
+  await carry.mouse.move(520, 560)
+  await carry.waitForTimeout(160)
+  const pitch = await transform(carry)
+  assert.ok(pitch.quaternion.every((n, i) => Math.abs(n - yaw.quaternion[i]) < 1e-5), 'vertical look must not tilt the window')
+  await carry.mouse.up()
+  await carry.keyboard.press('Escape')
+  await carry.waitForTimeout(100)
+  await mkdir('artifacts', { recursive: true })
+  const clean = await open('?item=thumbnail')
+  await clean.screenshot({ path: 'artifacts/item-carry-preview.png' })
+  // A real rendered thumbnail for XRift; exclude the browser-only toolbar/footer.
+  await clean.screenshot({ path: 'demo-item/public/thumbnail.png', clip: { x: 210, y: 170, width: 1020, height: 660 } })
+  assert.deepEqual(errors, [])
+  console.log('PASS: window title drag, content exclusion, late join, separate placements, placement preview, pointer-lock carry, yaw-only rotation')
+} finally { await browser.close() }
