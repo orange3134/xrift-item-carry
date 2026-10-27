@@ -1,4 +1,5 @@
 import { fileURLToPath, URL } from 'node:url'
+import { readFileSync } from 'node:fs'
 import { defineConfig, type Plugin } from 'vite'
 import federation from '@originjs/vite-plugin-federation'
 
@@ -27,6 +28,14 @@ function itemPayloadOnly(): Plugin {
           if (file.type === 'chunk' && file.name.startsWith('__federation_expose_Item')) visit(name)
         }
         for (const name of Object.keys(bundle)) if (!keep.has(name)) delete bundle[name]
+        // Include display metadata in the content hash, so description-only
+        // updates can create a new XRift version instead of reusing an ACTIVE one.
+        const { item } = JSON.parse(readFileSync(new URL('./xrift.json', import.meta.url), 'utf8'))
+        this.emitFile({
+          type: 'asset',
+          fileName: 'item-info.json',
+          source: JSON.stringify({ name: item.title, description: item.description, license: 'MIT' }, null, 2) + '\n',
+        })
       },
     },
   }
